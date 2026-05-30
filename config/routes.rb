@@ -768,7 +768,11 @@ Rails.application.routes.draw do
     end
 
     resources :links, except: [:edit, :show, :update, :new] do
-      resources :asset_previews, only: [:create, :destroy]
+      resources :asset_previews, only: [:create, :destroy] do
+        collection do
+          post :batch, to: "asset_previews#create_batch"
+        end
+      end
 
       resources :thumbnails, only: [:create, :destroy]
       resources :variants, only: [:index], controller: "products/variants"

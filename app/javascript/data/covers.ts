@@ -43,3 +43,20 @@ export const deleteCover = async (permalink: string, coverId: string) => {
 
   throw new ResponseError();
 };
+
+export const createCovers = async (permalink: string, signedBlobIds: string[]) => {
+  const response = await request({
+    method: "POST",
+    accept: "json",
+    url: Routes.batch_link_asset_previews_path(permalink),
+    data: { signed_blob_ids: signedBlobIds },
+  });
+  if (response.ok) {
+    const responseData = typia.assert<
+      { success: true; asset_previews: AssetPreview[] } | { success: false; error: string }
+    >(await response.json());
+    if (responseData.success) return responseData.asset_previews;
+    throw new ResponseError(responseData.error);
+  }
+  throw new ResponseError();
+};

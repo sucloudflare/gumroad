@@ -38,6 +38,33 @@ class AssetPreviewsController < ApplicationController
     end
   end
 
+  def create_batch
+    authorize AssetPreview
+
+    signed_blob_ids = params.require(:signed_blob_ids)
+    errors = []
+
+    signed_blob_ids.each do |signed_blob_id|
+      asset_preview = @product.asset_previews.build
+      asset_preview.file.attach(signed_blob_id)
+      asset_preview.analyze_file
+      if asset_preview.save
+        # saved successfully
+      else
+        asset_preview.file&.blob&.purge
+        errors << (asset_preview.errors.any? ? asset_preview.errors.full_messages.to_sentence : "Could not process preview")
+      end
+    end
+
+    if errors.any?
+      render json: { success: false, error: errors.first }
+    else
+      render json: { success: true, asset_previews: @product.display_asset_previews }
+    end
+  rescue *INTERNET_EXCEPTIONS
+    render json: { success: false, error: "Could not process your preview, please try again." }
+  end
+
   private
     def find_product
       e404 unless user_signed_in?

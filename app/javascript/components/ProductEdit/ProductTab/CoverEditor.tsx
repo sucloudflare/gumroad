@@ -4,7 +4,7 @@ import classNames from "classnames";
 import * as React from "react";
 import { ReactSortable as Sortable } from "react-sortablejs";
 
-import { CoverPayload, createCover, deleteCover } from "$app/data/covers";
+import { CoverPayload, createCover, createCovers, deleteCover } from "$app/data/covers";
 import { AssetPreview } from "$app/parsers/product";
 import FileUtils from "$app/utils/file";
 import { between } from "$app/utils/math";
@@ -179,21 +179,27 @@ const CoverUploader = ({
                   if (validFiles.length === 0) return;
 
                   setIsUploading(true);
-                  for (const file of validFiles) {
-                    // TODO change the relevant endpoint(s) to allow uploading multiple files at once
-                    await new Promise<void>((resolve) => {
-                      new DirectUpload(file, "/rails/active_storage/direct_uploads").create((error, blob) => {
-                        if (error) {
-                          showAlert(error.message, "error");
-                          resolve();
-                        } else {
-                          void saveCover({ type: "file", signedBlobId: blob.signed_id }).finally(resolve);
-                        }
-                      });
-                    });
+                  try {
+                    const signedBlobIds = await Promise.all(
+                      validFiles.map(
+                        (file) =>
+                          new Promise<string>((resolve, reject) => {
+                            new DirectUpload(file, "/rails/active_storage/direct_uploads").create((error, blob) => {
+                              if (error) reject(error);
+                              else resolve(blob.signed_id);
+                            });
+                          }),
+                      ),
+                    );
+                    const covers = await createCovers(permalink, signedBlobIds);
+                    setCovers(covers);
+                  } catch (e) {
+                    assertResponseError(e);
+                    showAlert(e.message, "error");
+                  } finally {
+                    setIsUploading(false);
+                    setIsSelecting(false);
                   }
-                  setIsUploading(false);
-                  setIsSelecting(false);
                 })}
               />
               <TabIcon>
