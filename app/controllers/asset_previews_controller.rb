@@ -49,7 +49,6 @@ class AssetPreviewsController < ApplicationController
       asset_preview.file.attach(signed_blob_id)
       asset_preview.analyze_file
       if asset_preview.save
-        # saved successfully
       else
         asset_preview.file&.blob&.purge
         errors << (asset_preview.errors.any? ? asset_preview.errors.full_messages.to_sentence : "Could not process preview")
